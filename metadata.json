@@ -1,0 +1,12 @@
+{
+  "name": "SENTOX",
+  "description": "Futuristic real-time global intelligence and sentiment analysis platform. Monitor emotions, markets, and geopolitics with advanced AI.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "AI-powered sentiment analysis",
+    "Real-time geopolitical monitoring",
+    "Market emotion tracking"
+  ]
+}
