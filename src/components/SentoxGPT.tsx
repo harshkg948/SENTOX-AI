@@ -6,7 +6,14 @@ import { GoogleGenAI } from '@google/genai';
 import { ChatMessage } from '../types';
 import { cn } from '../lib/utils';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const getAi = () => {
+  // Safe environment check for process.env
+  const apiKey = typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : undefined;
+  if (!apiKey) {
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const SentoxGPT: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -35,23 +42,35 @@ export const SentoxGPT: React.FC = () => {
     setInput('');
     setIsLoading(true);
 
-    try {
-      const response = await ai.getGenerativeModel({
-        model: 'gemini-1.5-flash',
-        systemInstruction: "You are SentoxGPT, a futuristic global intelligence AI. Your goal is to provide real-time-style summaries of geopolitical tensions, market sentiment, and social trends. Use technical, precise language with a cyberpunk 'Jarvis-meets-Bloomberg' tone. Always refer to your 'intel feeds' and 'global pulse sensors'.",
+  try {
+      const ai = getAi();
+      if (!ai) {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: "SYSTEM_OFFLINE: GEMINI_API_KEY_NOT_FOUND. To enable AI intelligence streams, please add `GEMINI_API_KEY` to your environment variables. You can find this in your project settings on Vercel.", 
+          timestamp: new Date().toISOString() 
+        }]);
+        setIsLoading(false);
+        return;
+      }
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: "SYSTEM_CONTEXT: You are SentoxGPT, a futuristic global intelligence AI. Your goal is to provide real-time-style summaries of geopolitical tensions, market sentiment, and social trends. Use technical, precise language with a cyberpunk 'Jarvis-meets-Bloomberg' tone. Always refer to your 'intel feeds' and 'global pulse sensors' (which are simulated for this demo)." }]
+          },
+          ...messages.map(m => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content }]
+          })),
+          { role: 'user', parts: [{ text: input }] }
+        ],
       });
 
-      const chat = response.startChat({
-        history: messages.map(m => ({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.content }]
-        }))
-      });
-
-      const result = await chat.sendMessage(input);
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: result.response.text(),
+        content: response.text || "COMM_ERROR: NO_RESPONSE_RETRY",
         timestamp: new Date().toISOString()
       };
 
